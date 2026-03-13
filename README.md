@@ -1,17 +1,8 @@
-# GeminiScanner — AI-Powered Burp Suite Extension
+# GeminiScanner
 
-A Burp Suite extension that uses 'Google Gemini' to automatically analyze HTTP requests and responses, identify vulnerabilities, generate targeted payloads, and actively verify findings.
+A Burp Suite extension that uses **Google Gemini** to automatically analyze HTTP requests and responses, identify vulnerabilities, generate targeted payloads, and actively verify findings.
 
----
-
-## What Makes This Different
-
-Most Burp extensions rely on static pattern matching or known signatures. GeminiScanner uses a large language model to reason about the full request/response context, making it especially effective for:
-
-- **Business logic vulnerabilities** — price manipulation, role escalation, workflow bypass
-- **API security (OWASP API Top 10)** — BOLA/IDOR, broken auth, mass assignment, BFLA
-- **Context-aware XSS** — detects reflection context (HTML body, attribute, JS string) and generates appropriate payloads
-- **Novel or chained vulnerabilities** that static tools miss
+> **Best results on API endpoints.** GeminiScanner was built with API security in mind — it reasons about the full request/response context rather than matching static signatures, which makes it significantly more effective at finding API-specific vulnerabilities (BOLA/IDOR, Mass Assignment, BFLA, Broken Auth) that traditional scanners routinely miss.
 
 ---
 
@@ -19,37 +10,55 @@ Most Burp extensions rely on static pattern matching or known signatures. Gemini
 
 ```
 1. Right-click any request → GeminiScanner — Scan This Request
-2. Phase 1: Gemini analyzes the request + response
-             → identifies parameters, reflection points, attack surface
-             → generates targeted payloads per parameter
+2. Phase 1: Gemini analyzes the full request + response
+             → identifies parameters, reflection points, auth mechanism
+             → generates targeted payloads per parameter and attack type
+             → flags tests that require manual follow-up (Repeater / Intruder)
 3. Phase 2: Each payload is sent via Burp's HTTP engine
              → Gemini verifies whether the response confirms exploitation
-4. Confirmed findings appear in the Confirmed tab with evidence and reproduction steps
+4. Results are routed to:
+             → Confirmed tab   — verified vulnerabilities with evidence
+             → Suspected tab   — ambiguous findings worth manual review
+             → Manual Actions  — tests that require Repeater / Intruder / Browser
 ```
+
+---
+
+## Why API Security
+
+Most Burp extensions and scanners rely on known signatures and pattern matching. They work reasonably well for classic web vulnerabilities but struggle with:
+
+- **BOLA / IDOR** — requires understanding object ownership context
+- **Mass Assignment** — requires knowing which fields *should not* be writable
+- **BFLA** — requires understanding the difference between user and admin functions
+- **Business Logic** — requires reasoning about what the application is *supposed* to do
+
+GeminiScanner sends the complete HTTP exchange to Gemini, which can reason about all of the above. In testing, it consistently outperformed signature-based tools on API targets.
 
 ---
 
 ## Features
 
-- Two-phase scan: **analysis → active verification**
-- Covers: XSS, SQLi, SSTI, Path Traversal, IDOR, SSRF, Command Injection, Business Logic, OWASP API Top 10
+- Two-phase scan: **AI analysis → active verification**
+- Covers: XSS, SQLi, SSTI, Path Traversal, IDOR, SSRF, Command Injection, Host Header Injection, Business Logic, OWASP API Top 10
 - Context-aware XSS payload generation (HTML body / attribute / JS string)
-- Encoding bypass payloads included automatically
-- Gemini-verified findings only — reduces false positives
+- Header injection testing: Host, X-Forwarded-For, X-Forwarded-Host, Origin, Referer
+- Smart routing: tries everything automatically first, only sends to Manual Actions when automation is insufficient or inconclusive
+- AI-verified findings — reduces false positives
 - Recommendations generated per scan
-- Four-tab UI: Settings, Scan Log, Confirmed, Payloads
+- Configurable toggles: Auto-send, Suspected findings, Recommendations, Debug log
 - Custom payload lists (XSS / SQLi / Other) used as AI hints
-- Persistent settings and payload lists
-- Native Burp color scheme — no custom theming
-- Integrates with Burp's active scanner (`ScanCheck`)
+- Custom system prompt support (appended to default, not replacing it)
+- Persistent settings and payload lists across sessions
+- Native Burp color scheme
 
 ---
 
 ## Requirements
 
-- Burp Suite Professional or Community (with Montoya API support — version 2022.9+)
+- Burp Suite Professional or Community (Montoya API — version 2022.9+)
 - Java 17+
-- Google Gemini API key — [get one free](https://aistudio.google.com/app/apikey)
+- Google Gemini API key — [get one free at Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ---
 
@@ -61,6 +70,11 @@ Most Burp extensions rely on static pattern matching or known signatures. Gemini
 git clone https://github.com/YOUR_USERNAME/GeminiScanner.git
 cd GeminiScanner
 ./gradlew clean jar
+```
+
+On Windows:
+```cmd
+gradlew.bat clean jar
 ```
 
 JAR will be at `build/libs/gemini-scanner-1.0.jar`.
@@ -77,35 +91,32 @@ JAR will be at `build/libs/gemini-scanner-1.0.jar`.
 ## Usage
 
 1. Browse or proxy traffic through Burp as normal
-2. In **Proxy History** or **Repeater**, right-click a request with a response
+2. In **Proxy History** or **Repeater**, right-click a request that has a response
 3. Select **GeminiScanner — Scan This Request**
 4. Watch the **Scan Log** tab for real-time progress
-5. Check the **Confirmed** tab for verified vulnerabilities
+5. Check results in **Confirmed**, **Suspected**, or **Manual Actions** tabs
 
 **Tips:**
-- Requests with responses give better results — send a normal request first, then scan
-- Add custom payloads in the **Payloads** tab to guide AI toward specific attack types
+- Always capture a response before scanning — right-click in Proxy History, not just the request
 - For API endpoints returning JSON, the full response body is analyzed
+- Use the **Payloads** tab to add custom payloads as hints for the AI
+- The **Custom Prompt** field appends to the default prompt — use it to add target-specific instructions (e.g. "also test the X-Internal-Token header")
+- `gemini-2.5-flash` is recommended for speed; use `gemini-1.5-pro` for deeper analysis on complex targets
 
 ---
 
-## Configuration
+## Settings
 
 | Setting | Description |
 |---|---|
 | Gemini API Key | Your Google AI Studio API key |
-| Model | `gemini-2.5-flash` recommended for speed; `gemini-1.5-pro` for depth |
-| Custom System Prompt | Override the default analysis prompt entirely |
-| XSS / SQLi / Other Payloads | Hints provided to Gemini alongside its own generated payloads |
-
----
-
-## Known Limitations
-
-- Gemini cannot execute JavaScript — XSS confirmation is based on response reflection analysis, not browser execution
-- Time-based SQLi (SLEEP, WAITFOR) confirmation may be unreliable due to network variance
-- Very large responses (> ~100KB) are truncated before sending to Gemini
-- Each scan makes 1 + (N × 2) Gemini API calls where N is the number of payloads tested
+| Model | AI model to use for analysis |
+| Auto-send payloads | Enable/disable Phase 2 active verification |
+| Show suspected findings | Show low-confidence results in Suspected tab |
+| Show recommendations | Print remediation advice in Scan Log |
+| Debug log | Verbose logging for troubleshooting |
+| Custom System Prompt | Extra instructions appended to the default prompt |
+| XSS / SQLi / Other Payloads | Hint lists provided to Gemini alongside its own generated payloads |
 
 ---
 
@@ -113,13 +124,22 @@ JAR will be at `build/libs/gemini-scanner-1.0.jar`.
 
 ```
 src/main/java/
-  MyAiScanner.java      Extension entry point
-  AiSettingsTab.java    UI — four-tab panel
-  ApiAnalyzer.java      Gemini API client, phase 1/2 logic, request modification
-  EndpointMenu.java     Right-click context menu, scan orchestration
-  AiScannerCheck.java   Burp ScanCheck integration
+  MyAiScanner.java      Extension entry point (BurpExtension)
+  AiSettingsTab.java    UI — Settings, Scan Log, Confirmed, Suspected, Manual Actions, Payloads
+  ApiAnalyzer.java      Gemini API client, Phase 1/2 logic, request modification
+  EndpointMenu.java     Right-click context menu, scan orchestration, result routing
+  AiScannerCheck.java   Burp ScanCheck integration (active scanner)
 build.gradle.kts
 ```
+
+---
+
+## Known Limitations
+
+- XSS confirmation is based on response reflection analysis — Gemini cannot execute JavaScript in a browser, so DOM-only XSS may not be confirmed automatically (routed to Manual Actions instead)
+- Time-based SQLi (SLEEP, WAITFOR) confirmation may be unreliable due to network latency variance
+- Very large responses (> ~100KB) are truncated before sending to Gemini
+- Each scan makes approximately `1 + (N × 2)` Gemini API calls where N is the number of payloads tested — use `gemini-2.5-flash` to keep costs low
 
 ---
 
