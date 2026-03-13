@@ -142,6 +142,27 @@ build.gradle.kts
 - Each scan makes approximately `1 + (N × 2)` Gemini API calls where N is the number of payloads tested — use `gemini-2.5-flash` to keep costs low
 
 ---
+## Screenshots
+
+### Settings
+![Settings](Images/Settings.png)
+
+### Scan Log
+![Scan Log](Images/Scan%20Log.png)
+
+### Confirmed Findings
+![Confirmed](Images/Confirmed.png)
+
+### Suspected Findings
+![Suspected](Images/Suspected.png)
+
+### Manual Actions
+![Manual Actions](Images/Manual%20Actions.png)
+
+### Payload Management
+![Payloads](Images/Payloads.png)
+
+---
 
 ## License
 
