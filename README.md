@@ -144,23 +144,17 @@ build.gradle.kts
 ---
 ## Screenshots
 
-### Settings
-![Settings](Images/Settings.png)
+<img src="Images/Settings.png" width="800">
 
-### Scan Log
-![Scan Log](Images/Scan%20Log.png)
+<img src="Images/Scan%20Log.png" width="800">
 
-### Confirmed Findings
-![Confirmed](Images/Confirmed.png)
+<img src="Images/Confirmed.png" width="800">
 
-### Suspected Findings
-![Suspected](Images/Suspected.png)
+<img src="Images/Suspected.png" width="800">
 
-### Manual Actions
-![Manual Actions](Images/Manual%20Actions.png)
+<img src="Images/Manual%20Actions.png" width="800">
 
-### Payload Management
-![Payloads](Images/Payloads.png)
+<img src="Images/Payloads.png" width="800">
 
 ---
 
