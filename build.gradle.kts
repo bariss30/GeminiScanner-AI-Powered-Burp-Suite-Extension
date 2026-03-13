@@ -16,7 +16,6 @@ repositories {
 }
 
 dependencies {
-    // compileOnly değil implementation — JAR'a dahil olsun
     implementation("net.portswigger.burp.extensions:montoya-api:2023.12.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
